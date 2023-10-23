@@ -1,25 +1,33 @@
 import cv2
 import face_recognition
-import sys
+
+from console_helper import print_error
+from play_alert import play_alert
 
 
 quit_hint = "Press 'Esc' or 'q' to quit the program."
 start_hint = "Face detection paused, press 'R' or 'r' to start face detection."
 pause_hint = "Face detection started, press 'G' or 'g' to pause face detection."
 
-# Print error message to stderr
-def print_error(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
+alert = play_alert()
 
-# Detect faces in a frame
+
 def detect_faces(frame):
+    # Detect faces in a frame
     color_red = (0, 0, 200)
     face_locations = face_recognition.face_locations(frame)
 
     # Draw rectangles on the faces detected
     for location in face_locations:
         top, right, bottom, left = location
-        cv2.rectangle(frame, (left, top), (right, bottom), color_red, thickness=2)
+        cv2.rectangle(frame, (left, top), (right, bottom),
+                      color_red, thickness=2)
+
+    # Play the alert if there is any face detected
+    # We do not stop the alert if there is no face detected as the alert will stop automatically
+    if len(face_locations) > 0:
+        alert.start_alert()
+
 
 def main():
     # Open the first camera
@@ -35,8 +43,11 @@ def main():
             print_error('Error: Cannot read frame from the video source.')
             break
 
-        # Detect faces and draw a rectangle on each face
-        if not paused:
+        if paused:
+            # Stop any alert if the face detection is paused
+            alert.stop_alert()
+        else:
+            # Detect faces and draw a rectangle on each face
             detect_faces(frame)
 
         # Show the image frame
@@ -58,10 +69,13 @@ def main():
         if cv2.getWindowProperty('Frame', cv2.WND_PROP_VISIBLE) < 1:
             break
 
+    # Stop the alert in case it is still playing
+    alert.stop_alert()
+
     # Release the capture and destroy all OpenCV windows
     capture.release()
     cv2.destroyAllWindows()
 
+
 if __name__ == '__main__':
     main()
-
